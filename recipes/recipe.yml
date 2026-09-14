@@ -209,30 +209,13 @@ modules:
         - xdg-desktop-portal-hyprland
         - zen-browser
 
-  # ---------------------------------------------------------------------
-  # HDR + gamescope userspace, mirroring what Bazzite ships alongside its
-  # ogc kernel:
-  #   - gamescope: Bazzite's patched (HDR/VRR-enabled) build from their
-  #     own COPR; provides VkLayer_FROG_gamescope_wsi plus
-  #     `gamescope --hdr-enabled`. Hyprland's native HDR (color-management
-  #     protocol) needs nothing extra beyond the nvidia-drm.modeset=1 karg
-  #     the akmods module below already sets.
-  #   - VK_hdr_layer: Vulkan HDR injection layer for SDR games -- the same
-  #     package Bazzite installs on its NVIDIA images (from
-  #     ublue-os/staging; see ublue-os/bazzite PR #3889). Enabled
-  #     transiently here: the staging repo is removed again by
-  #     `cleanup: true` after the install.
-  #   - egl-wayland: NVIDIA Wayland EGL (the 32-bit variant matters for
-  #     32-bit apps and may be missing from the base image).
-  # gamescope-session / Steam Gaming Mode is deliberately out of scope:
-  # it is deck-image plumbing that adds nothing on a Hyprland desktop.
-  # ---------------------------------------------------------------------
   - type: dnf
     repos:
       cleanup: true
       copr:
         - bazzite-org/bazzite
         - ublue-os/staging
+        - ublue-os/packages
     install:
       install-weak-deps: false
       packages:
@@ -247,24 +230,6 @@ modules:
       - xpadneo
     nvidia-driver: nvidia-open
 
-  # ---------------------------------------------------------------------
-  # Kernel command-line additions, applied the BlueBuild way: written to
-  # /usr/lib/bootc/kargs.d/bluebuild-kargs.toml and applied by bootc on
-  # the next deploy/boot (`rpm-ostree kargs` shows what is live on a
-  # running system; `ls /usr/lib/bootc/kargs.d/` shows what the image
-  # carries).
-  #
-  # Deliberately MINIMAL: Bazzite's own "extra kargs" are almost all
-  # hardware-conditional, first-boot runtime changes applied by
-  # bazzite-hardware-setup (amdgpu.ppfeaturemask, amd_iommu=off, EDID
-  # fixes, Framework keyboard fix, ...) and must NOT be baked into an
-  # image. The nouveau-blacklist/nvidia-drm.modeset kargs are added
-  # automatically by the akmods module above
-  # (00-bluebuild-nvidia-kargs.toml), so they are not repeated here. The
-  # only unconditional, gaming-relevant karg Bazzite applies image-wide
-  # is bluetooth.disable_ertm=1, needed for some Bluetooth controllers
-  # (e.g. DualSense over BT) to pair and work correctly.
-  # ---------------------------------------------------------------------
   - type: kargs
     kargs:
       - bluetooth.disable_ertm=1
@@ -356,6 +321,4 @@ modules:
         - pyprland.service
         - brew-packages-setup.service
 
-  # Must run LAST: regenerates initramfs after every prior filesystem
-  # change (dracut.conf.d, modprobe.d, the NVIDIA driver install).
   - type: initramfs

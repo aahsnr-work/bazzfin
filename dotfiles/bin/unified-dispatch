@@ -1,0 +1,131 @@
+#!/usr/bin/env bash
+# ══════════════════════════════════════════════════════════════════════════════
+# unified-dispatch — Hyprland ≥0.54 layout-aware window dispatcher
+# ══════════════════════════════════════════════════════════════════════════════
+
+# Enforce strict error handling
+set -euo pipefail
+
+# ── WORKSPACE → LAYOUT TABLE ──────────────────────────────────────────────────
+declare -A WS_LAYOUT=(
+    [1]="scrolling"
+    [2]="scrolling"
+    [3]="scrolling"
+    [4]="dwindle"
+    [5]="dwindle"
+    [6]="dwindle"
+    [7]="master"
+    [8]="master"
+    [9]="monocle"
+)
+
+# ── Validation ────────────────────────────────────────────────────────────────
+if [[ $# -ne 2 ]]; then
+    printf "Usage: %s {focus|movewin|resize} {l|r|u|d}\n" "${0##*/}" >&2
+    exit 1
+fi
+
+action="${1,,}"    # Convert to lowercase
+direction="${2,,}" # Convert to lowercase
+
+if [[ ! "$direction" =~ ^(l|r|u|d)$ ]]; then
+    printf "Error: direction must be l, r, u, or d (got: '%s')\n" "$direction" >&2
+    exit 1
+fi
+
+if [[ ! "$action" =~ ^(focus|movewin|resize)$ ]]; then
+    printf "Error: unknown action '%s'. Use: focus | movewin | resize\n" "$action" >&2
+    exit 1
+fi
+
+# ── Dispatch Helper ───────────────────────────────────────────────────────────
+dispatch() {
+    hyprctl dispatch -- "$@" >/dev/null 2>&1
+}
+
+# ── Layout Detection ──────────────────────────────────────────────────────────
+get_active_layout() {
+    local ws_json ws_id layout
+
+    ws_json=$(hyprctl activeworkspace -j 2>/dev/null) || {
+        printf "Error: Failed to query active workspace from Hyprland.\n" >&2
+        exit 1
+    }
+
+    ws_id=$(jq -r '.id // empty' <<<"$ws_json")
+    layout=$(jq -r '.layout // empty' <<<"$ws_json" | tr '[:upper:]' '[:lower:]')
+
+    # Tier 1: IPC (Trust known valid layout names)
+    if [[ "$layout" =~ ^(scroller|dwindle|master|monocle)$ ]]; then
+        printf "%s\n" "$layout"
+        return 0
+    fi
+
+    # Tier 2: Static Table Fallback
+    if [[ -n "$ws_id" && -n "${WS_LAYOUT[$ws_id]:-}" ]]; then
+        printf "%s\n" "${WS_LAYOUT[$ws_id]}"
+        return 0
+    fi
+
+    printf "Error: Workspace '%s' not mapped in WS_LAYOUT table.\n" "$ws_id" >&2
+    exit 1
+}
+
+layout=$(get_active_layout)
+
+# ── Execution ─────────────────────────────────────────────────────────────────
+case "$action" in
+focus)
+    case "$layout" in
+    scroller)
+        dispatch scroller:movefocus "$direction"
+        ;;
+    master | monocle)
+        case "$direction" in
+        r | d) dispatch layoutmsg cyclenext ;;
+        l | u) dispatch layoutmsg cycleprev ;;
+        esac
+        ;;
+    dwindle | *)
+        dispatch movefocus "$direction"
+        ;;
+    esac
+    ;;
+
+movewin)
+    case "$layout" in
+    scroller)
+        dispatch scroller:movewindow "$direction"
+        ;;
+    master)
+        case "$direction" in
+        r | d) dispatch layoutmsg rollnext ;;
+        l | u) dispatch layoutmsg rollprev ;;
+        esac
+        ;;
+    monocle)
+        case "$direction" in
+        r | d) dispatch layoutmsg cyclenext ;;
+        l | u) dispatch layoutmsg cycleprev ;;
+        esac
+        ;;
+    dwindle | *)
+        dispatch movewindow "$direction"
+        ;;
+    esac
+    ;;
+
+resize)
+    # The hyprscroller plugin safely hooks into the native resizeactive dispatcher.
+    # Fitsize and Cyclesize are handled by separate direct bindings, so pixel
+    # increments remain native.
+    case "$direction" in
+    l) dispatch resizeactive -60 0 ;;
+    r) dispatch resizeactive 60 0 ;;
+    u) dispatch resizeactive 0 -60 ;;
+    d) dispatch resizeactive 0 60 ;;
+    esac
+    ;;
+esac
+
+exit 0

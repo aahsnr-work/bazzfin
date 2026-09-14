@@ -1,0 +1,361 @@
+---
+# yaml-language-server: $schema=https://schema.blue-build.org/recipe-v1.json
+
+version: 1
+name: bazzfin
+description: >-
+  A desktop-free Universal Blue base with the NVIDIA (open) driver, the
+  Hyprland Wayland compositor and the ly display manager baked in, plus
+  every application, font, Flatpak, dotfile and Homebrew package needed
+  at first login.
+
+base-image: ghcr.io/ublue-os/base-main
+image-version: latest
+
+modules:
+  - type: signing
+
+  - type: files
+    files:
+      - source: system
+        destination: /
+
+  # ---------------------------------------------------------------------
+  # /opt symlink fix (Brave's RPM installs into /opt, which doesn't exist
+  # as a real directory yet on a fresh ostree tree), package removal
+  # inherited unconditionally from the base image, and a sanity check that
+  # the base image still ships /usr/share/ublue-os/justfile (installed by
+  # the `ublue-os-just` package). We stopped shipping our own override of
+  # that file (see the `justfiles` module near the bottom) so that the
+  # default recipes Bazzite, Bluefin and Aurora all inherit from the same
+  # package -- bios, clean-system, distrobox-assemble, configure-broadcom-wl,
+  # etc. -- stay reachable under `ujust` here too. If a future base image
+  # ever drops that package, this fails the build loudly instead of
+  # silently losing `ujust`.
+  # ---------------------------------------------------------------------
+  - type: script
+    snippets:
+      - mkdir -p /usr/lib/opt
+      - '[ -L /opt ] && [ "$(readlink /opt)" = "var/opt" ] && rm -f /opt && ln -s usr/lib/opt /opt || true'
+      - 'test -f /usr/share/ublue-os/justfile || { echo "ERROR: /usr/share/ublue-os/justfile missing -- is ublue-os-just still provided by the base image?" >&2; exit 1; }'
+    scripts:
+      - global-remove.sh
+
+  # ---------------------------------------------------------------------
+  # Swap in Universal Blue's "ogc" kernel (Open Gaming Collective --
+  # https://github.com/OpenGamingCollective/kernel-packages-fedora),
+  # the same gaming-oriented kernel Bazzite ships. The `akmods` module
+  # further down can't do this itself: per BlueBuild's docs, its
+  # `base:` field only selects which *pre-built kmod/driver set* to
+  # fetch for a kernel that's already running -- "custom kernels are
+  # not supported" by the module. The package swap has to be done by
+  # hand, the same way Bazzite's own build does it:
+  #   https://github.com/ublue-os/bazzite/blob/main/build_files/install-kernel-akmods
+  #
+  # `44` is the Fedora release base-main currently tracks (Fedora
+  # Linux 44, released 2026-04-28). Bump it whenever Universal Blue's
+  # base images move to a new Fedora release -- ghcr.io/ublue-os/akmods
+  # publishes a floating "ogc-<fedora_version>" tag per release,
+  # rebuilt daily: https://github.com/ublue-os/akmods#how-its-organized
+  # The renovate custom manager (.github/renovate.json5) tries to keep
+  # this current automatically; treat that as a nice-to-have, not a
+  # guarantee -- double check it after any base-image Fedora bump.
+  #
+  # `copy`'s `from:` takes a plain image reference (no `stages:` block
+  # needed), so this becomes a straight
+  #   COPY --from=ghcr.io/ublue-os/akmods:ogc-44 /kernel-rpms /tmp/ogc-kernel-rpms
+  # https://blue-build.org/reference/modules/copy/
+  # ---------------------------------------------------------------------
+  - type: copy
+    from: ghcr.io/ublue-os/akmods:ogc-44
+    src: /kernel-rpms
+    dest: /tmp/ogc-kernel-rpms
+
+  - type: script
+    scripts:
+      - install-ogc-kernel.sh
+
+  - type: dnf
+    repos:
+      cleanup: true
+      files:
+        - https://raw.githubusercontent.com/terrapkg/subatomic-repos/main/terra.repo
+        - https://brave-browser-rpm-release.s3.brave.com/brave-browser.repo
+        - vscode.repo # files/dnf/vscode.repo
+      keys:
+        - https://packages.microsoft.com/keys/microsoft.asc
+        - https://brave-browser-rpm-release.s3.brave.com/brave-core.asc
+    install:
+      install-weak-deps: false
+      packages:
+        - accountsservice
+        - bleachbit
+        - bluez-tools
+        - brightnessctl
+        - cargo
+        - cmake
+        - cronie
+        - curl
+        - ddcutil
+        - direnv
+        - distrobox
+        - emacs-pgtk
+        - fail2ban
+        - fastfetch
+        - file-roller
+        - fontconfig
+        - fonts-filesystem
+        - gcc-c++
+        - git
+        - gnome-keyring
+        - gnome-tweaks
+        - go
+        - grim
+        - gsettings-desktop-schemas
+        - gtk4-layer-shell
+        - gzip
+        - hunspell
+        - hunspell-en
+        - hunspell-en-GB
+        - hunspell-en-US
+        - ImageMagick
+        - imv
+        - inotify-tools
+        - jq
+        - kitty
+        - kitty-shell-integration
+        - kitty-terminfo
+        - liberation-fonts
+        - libinput-utils
+        - logrotate
+        - ly
+        - lynis
+        - man-db
+        - mpv
+        - neovim
+        - ninja-build
+        - nix
+        - nix-daemon
+        - nodejs
+        - npm
+        - papers
+        - papirus-icon-theme
+        - pipx
+        - pkgconf-pkg-config
+        - plymouth
+        - plymouth-theme-spinner
+        - podman
+        - podman-sequoia
+        - policycoreutils-python-utils
+        - pymol
+        - qt5ct
+        - slurp
+        - sqlite
+        - swappy
+        - thunar
+        - thunar-archive-plugin
+        - thunar-media-tags-plugin
+        - thunar-vcs-plugin
+        - thunar-volman
+        - transmission-gtk
+        - tree-sitter-cli
+        - udiskie
+        - xdg-desktop-portal
+        - xdg-user-dirs
+        - xdg-user-dirs-gtk
+        - xhost
+        - xorg-x11-server-Xorg
+        - xorg-x11-server-Xwayland
+        - xorg-x11-xauth
+        - zathura
+        - zathura-pdf-poppler
+        - zathura-plugins-all
+        - zsh
+        # - repo: fedora
+        #   install-weak-deps: false
+        #   packages:
+        #     - kitty
+        #     - kitty-shell-integration
+        #     - kitty-terminfo
+        - repo: terra
+          install-weak-deps: false
+          packages:
+            - zed
+        - repo: code
+          install-weak-deps: false
+          packages:
+            - code
+        - repo: brave-browser
+          packages:
+            - brave-browser
+            - brave-origin
+
+  - type: dnf
+    repos:
+      cleanup: true
+      copr:
+        - sneexy/zen-browser
+        - lionheartp/Hyprland
+    install:
+      skip-unavailable: false
+      install-weak-deps: false
+      packages:
+        - cliphist
+        - hyprland-git
+        - hyprpwcenter
+        - noctalia-git
+        - nwg-look
+        - qt6ct
+        - xdg-desktop-portal-hyprland
+        - zen-browser
+
+  # ---------------------------------------------------------------------
+  # HDR + gamescope userspace, mirroring what Bazzite ships alongside its
+  # ogc kernel:
+  #   - gamescope: Bazzite's patched (HDR/VRR-enabled) build from their
+  #     own COPR; provides VkLayer_FROG_gamescope_wsi plus
+  #     `gamescope --hdr-enabled`. Hyprland's native HDR (color-management
+  #     protocol) needs nothing extra beyond the nvidia-drm.modeset=1 karg
+  #     the akmods module below already sets.
+  #   - VK_hdr_layer: Vulkan HDR injection layer for SDR games -- the same
+  #     package Bazzite installs on its NVIDIA images (from
+  #     ublue-os/staging; see ublue-os/bazzite PR #3889). Enabled
+  #     transiently here: the staging repo is removed again by
+  #     `cleanup: true` after the install.
+  #   - egl-wayland: NVIDIA Wayland EGL (the 32-bit variant matters for
+  #     32-bit apps and may be missing from the base image).
+  # gamescope-session / Steam Gaming Mode is deliberately out of scope:
+  # it is deck-image plumbing that adds nothing on a Hyprland desktop.
+  # ---------------------------------------------------------------------
+  - type: dnf
+    repos:
+      cleanup: true
+      copr:
+        - bazzite-org/bazzite
+        - ublue-os/staging
+    install:
+      install-weak-deps: false
+      packages:
+        - gamescope
+        - VK_hdr_layer
+        - egl-wayland
+
+  - type: akmods@latest
+    base: ogc
+    install:
+      - xone
+      - xpadneo
+    nvidia-driver: nvidia-open
+
+  # ---------------------------------------------------------------------
+  # Kernel command-line additions, applied the BlueBuild way: written to
+  # /usr/lib/bootc/kargs.d/bluebuild-kargs.toml and applied by bootc on
+  # the next deploy/boot (`rpm-ostree kargs` shows what is live on a
+  # running system; `ls /usr/lib/bootc/kargs.d/` shows what the image
+  # carries).
+  #
+  # Deliberately MINIMAL: Bazzite's own "extra kargs" are almost all
+  # hardware-conditional, first-boot runtime changes applied by
+  # bazzite-hardware-setup (amdgpu.ppfeaturemask, amd_iommu=off, EDID
+  # fixes, Framework keyboard fix, ...) and must NOT be baked into an
+  # image. The nouveau-blacklist/nvidia-drm.modeset kargs are added
+  # automatically by the akmods module above
+  # (00-bluebuild-nvidia-kargs.toml), so they are not repeated here. The
+  # only unconditional, gaming-relevant karg Bazzite applies image-wide
+  # is bluetooth.disable_ertm=1, needed for some Bluetooth controllers
+  # (e.g. DualSense over BT) to pair and work correctly.
+  # ---------------------------------------------------------------------
+  - type: kargs
+    kargs:
+      - bluetooth.disable_ertm=1
+
+  # ly's SELinux context, plus apps installed from upstream release
+  # artifacts rather than a package repository (jq/curl/gcc are already
+  # installed at this point).
+  - type: script
+    snippets:
+      - semanage fcontext -a -t xdm_exec_t /usr/bin/ly 2>/dev/null || semanage fcontext -m -t xdm_exec_t /usr/bin/ly 2>/dev/null || true
+      - restorecon -v /usr/bin/ly 2>/dev/null || true
+    scripts:
+      - install-obsidian.sh
+      - install-zotero.sh
+      - install-pyprland.sh
+      # - install-texlive.sh
+
+  # Dotfiles: installs chezmoi itself + the init/update services.
+  - type: chezmoi
+    repository: https://github.com/aahsnr-configs/dots
+    file-conflict-policy: replace
+
+  # Pre-seed /etc/skel at build time (same as the old setup-dotfiles.sh)
+  # so brand-new users get the dotfiles immediately at first login instead
+  # of waiting on chezmoi-init.service. Must run after the chezmoi module.
+  #
+  # -v makes chezmoi log each file it writes, and the `find` afterward
+  # lists what actually landed in /etc/skel — both purely so the build
+  # log itself proves the apply did something, instead of only proving
+  # the command exited 0.
+  - type: script
+    snippets:
+      - HOME=/etc/skel /usr/bin/chezmoi init --apply --force --no-tty -v https://github.com/aahsnr-configs/dots
+      - echo "== /etc/skel contents after chezmoi apply ==" && find /etc/skel -maxdepth 3
+
+  # Homebrew itself (installer + update/upgrade timers), same intervals
+  # as the old brew-update.timer / brew-upgrade.timer.
+  - type: brew
+    update-interval: "6h"
+    update-wait-after-boot: "10m"
+    upgrade-interval: "8h"
+    upgrade-wait-after-boot: "30m"
+
+  # Flathub remotes for both scopes. Add Flatpak IDs to `install:` as needed
+  # (both lists were empty in the old setup-default-flatpaks.sh too).
+  - type: default-flatpaks
+    configurations:
+      - scope: system
+        notify: true
+        install: []
+      - scope: user
+        notify: true
+        install:
+          - com.github.tchx84.Flatseal
+          - org.onlyoffice.desktopeditors
+          - com.bitwarden.desktop
+          - com.ticktick.TickTick
+
+  - type: fonts
+    fonts:
+      nerd-fonts:
+        - JetBrainsMono
+        - NerdFontsSymbolsOnly
+      google-fonts:
+        - JetBrains Mono
+        - Noto Emoji
+        - Noto Color Emoji
+
+  - type: justfiles
+    validate: false
+    install: true
+
+  # Everything the modules don't already enable for you.
+  - type: systemd
+    system:
+      enabled:
+        - accounts-daemon.service
+        - podman.socket
+        # - ly@tty2.service
+        - nix.mount
+        - nix-daemon
+        - set-default-shell.service
+      masked:
+        #  - getty@tty2.service
+        - nvidia-persistenced.service
+        - nvidia-powerd.service
+    user:
+      enabled:
+        - pyprland.service
+        - brew-packages-setup.service
+
+  # Must run LAST: regenerates initramfs after every prior filesystem
+  # change (dracut.conf.d, modprobe.d, the NVIDIA driver install).
+  - type: initramfs

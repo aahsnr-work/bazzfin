@@ -1,0 +1,16 @@
+cosign.key
+Containerfile
+# Build/test artifacts
+*.build
+*.log
+/tmp/
+/dist/
+# Locally built container archives
+*.tar
+*.tar.gz
+*.oci
+# Editor noise
+.vscode/
+.idea/
+*.swp
+/.bluebuild-scripts_*

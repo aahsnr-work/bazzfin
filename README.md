@@ -70,13 +70,18 @@ by hand.
   hardware/monitoring tier: `lm_sensors`, `i2c-tools`, `iio-sensor-proxy`,
   `intel-gpu-tools`, `btop`, `duf`, `stress-ng`, `ydotool`. SELinux
   auditing & troubleshooting beyond the base image's core policy stack:
-  `setroubleshoot`(-`server`/`-plugins`) with `sealert` (the build applies
-  Bazzite's `/var/lib/selinux -> /etc/selinux` patch to `util.py`, which
-  is required on ostree/bootc systems), `setools-console` (`sesearch`,
-  `seinfo`) and `udica` (container policy generation). Note: the sealert
-  applet does not XDG-autostart under Hyprland — use the CLI
-  (`sudo sealert -l '*'`, denial history via `ausearch -m avc -ts recent`)
-  or add `sealert -b` to your Hyprland startup. Extra `ujust`
+  the full `setroubleshoot` + `setroubleshoot-server` + `setroubleshoot-plugins`
+  trio with `sealert` (Bazzite only gets `setroubleshoot-server` implicitly,
+  as a dependency of `cockpit-selinux`), `setools-console` (`sesearch`,
+  `seinfo`) and `udica` (container policy generation, also installed by
+  Bazzite). The build applies Bazzite's `/var/lib/selinux -> /etc/selinux`
+  patch to setroubleshoot's `util.py`: on Fedora 44 `semanage.conf` sets no
+  `store-root`, so setroubleshoot falls back to `/var/lib/selinux`, which is
+  wrong on ostree/bootc systems where the policy store lives under
+  `/etc/selinux`. Note: the sealert applet does not XDG-autostart under
+  Hyprland — use the CLI (`sudo sealert -l '*'`, denial history via
+  `ausearch -m avc -ts recent`) or add `sealert -b` to your Hyprland
+  startup. Extra `ujust`
   recipes: `rollback`, `status`, `cockpit`, `toggle-bpftune` (see
   `files/justfiles/50-system.just`).
 - Hyprland from the `lionheartp/Hyprland` COPR, `ly` on tty2, the Fedora

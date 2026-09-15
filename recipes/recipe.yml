@@ -214,11 +214,9 @@ modules:
     install:
       install-weak-deps: false
       packages:
-        - repo: terra-extras
-          install-weak-deps: false
-          packages:
-            - terra-gamescope
-            - terra-gamescope-libs
+        # - repo: terra-extras
+        #   install-weak-deps: false
+        #   packages:
         - repo: terra
           install-weak-deps: false
           packages:
@@ -233,6 +231,8 @@ modules:
         - vulkan-tools
         - winetricks
         - mangohud
+        - terra-gamescope
+        - terra-gamescope-libs
 
   - type: akmods@latest
     base: ogc

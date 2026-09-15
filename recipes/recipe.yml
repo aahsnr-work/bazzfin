@@ -254,7 +254,7 @@ modules:
     repos:
       cleanup: true
       copr:
-        - ublue-os/packages        # uupd, ublue-os-selinux-workarounds
+        - ublue-os/packages # uupd, ublue-os-selinux-workarounds
     install:
       install-weak-deps: false
       packages:

@@ -17,5 +17,5 @@
 - [x] Make sure packages from hyprland copr are only installed from the copr
 - [x] set-default-shell should only run once after user first logs in after rebase is done. Determine if that is even possible, otherwise you don't need to take any actions on this part. But make sure zsh be set default for both user and root account, assuming that root account is disabled and accessed using sudo -i.
 - [ ] From the logs make sure all non-fedora repos are removed after package is installed from it. Also make sure that everything is correct and in order and that the github workflow performed without issues.
-- [ ] Move global-remove.sh from scripts to recipe.yml
+- [ ] Would it be better to move global-remove.sh from scripts to recipe.yml
 - [x] Either use https://github.com/ublue-os/uupd or ujust update bazzite ujust documentation (resolved 2026-09-15: chose uupd -- installed from the ublue-os/packages COPR and enabled by default; the shared ublue-os-just recipes already detect and drive it)

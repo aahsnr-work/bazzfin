@@ -148,6 +148,7 @@ modules:
         - podman-sequoia
         - policycoreutils-python-utils
         - pymol
+        - python3-xlib
         - qt5ct
         - slurp
         - sqlite

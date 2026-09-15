@@ -280,6 +280,16 @@ modules:
         - duf
         - stress-ng
         - ydotool
+        # SELinux auditing & troubleshooting (Bazzite ships the same set;
+        # the base image only has the core policy stack). setroubleshoot's
+        # util.py hardcodes /var/lib/selinux, which does not exist on
+        # ostree/bootc systems -- the script module further down applies
+        # Bazzite's /etc/selinux path patch after these install.
+        - setroubleshoot
+        - setroubleshoot-server
+        - setroubleshoot-plugins
+        - setools-console
+        - udica
 
   - type: dnf
     repos:
@@ -335,6 +345,12 @@ modules:
       - test -f /etc/bluetooth/input.conf && sed -i 's/#UserspaceHID.*/UserspaceHID=true/' /etc/bluetooth/input.conf || true
       - semanage fcontext -a -t xdm_exec_t /usr/bin/ly 2>/dev/null || semanage fcontext -m -t xdm_exec_t /usr/bin/ly 2>/dev/null || true
       - restorecon -v /usr/bin/ly 2>/dev/null || true
+      # setroubleshoot's util.py hardcodes /var/lib/selinux as the policy
+      # store, but on ostree/bootc systems it lives under /etc/selinux --
+      # without this patch setroubleshootd cannot analyze denials. Same
+      # sed Bazzite applies in its finalize stage (runs after the dnf
+      # modules, so setroubleshoot is installed by now).
+      - test -n "$(ls /usr/lib/python3.*/site-packages/setroubleshoot/util.py 2>/dev/null)" && sed -i 's#/var/lib/selinux#/etc/selinux#g' /usr/lib/python3.*/site-packages/setroubleshoot/util.py || true
     scripts:
       - install-obsidian.sh
       - install-zotero.sh

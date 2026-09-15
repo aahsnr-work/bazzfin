@@ -68,7 +68,15 @@ by hand.
   own automatic-update timer is disabled in favor of uupd
   (`/etc/rpm-ostreed.conf`: `AutomaticUpdatePolicy=none`). Intel-scoped
   hardware/monitoring tier: `lm_sensors`, `i2c-tools`, `iio-sensor-proxy`,
-  `intel-gpu-tools`, `btop`, `duf`, `stress-ng`, `ydotool`. Extra `ujust`
+  `intel-gpu-tools`, `btop`, `duf`, `stress-ng`, `ydotool`. SELinux
+  auditing & troubleshooting beyond the base image's core policy stack:
+  `setroubleshoot`(-`server`/`-plugins`) with `sealert` (the build applies
+  Bazzite's `/var/lib/selinux -> /etc/selinux` patch to `util.py`, which
+  is required on ostree/bootc systems), `setools-console` (`sesearch`,
+  `seinfo`) and `udica` (container policy generation). Note: the sealert
+  applet does not XDG-autostart under Hyprland — use the CLI
+  (`sudo sealert -l '*'`, denial history via `ausearch -m avc -ts recent`)
+  or add `sealert -b` to your Hyprland startup. Extra `ujust`
   recipes: `rollback`, `status`, `cockpit`, `toggle-bpftune` (see
   `files/justfiles/50-system.just`).
 - Hyprland from the `lionheartp/Hyprland` COPR, `ly` on tty2, the Fedora

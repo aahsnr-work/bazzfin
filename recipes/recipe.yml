@@ -180,6 +180,11 @@ modules:
         - repo: terra
           install-weak-deps: false
           packages:
+            # Installs /etc/yum.repos.d/terra-extras.repo (disabled by
+            # default) -- the sub-repo Bazzite sources terra-gamescope,
+            # terra-mangohud and friends from (enabled per-install below
+            # via the `repo: terra-extras` entries).
+            - terra-release-extras
             - zed
         - repo: code
           install-weak-deps: false
@@ -209,19 +214,68 @@ modules:
         - xdg-desktop-portal-hyprland
         - zen-browser
 
+  # ---------------------------------------------------------------------
+  # Bazzite's gaming userland, integrated the same way Bazzite's own
+  # build does it (see ublue-os/bazzite's Containerfile). The old
+  # bazzite-org/bazzite COPR no longer provides gamescope (nor do the
+  # current ublue-os/bazzite COPRs) -- Bazzite's patched gamescope and
+  # MangoHud now come from the Terra project's terra-extras sub-repo
+  # (enabled above by installing terra-release-extras). The sched-ext
+  # schedulers (scx-scheds/scx-tools, incl. the scx_loader D-Bus daemon
+  # and its scxctl client) come from Terra's main repo, same versions
+  # Bazzite pulls from bieszczaders/kernel-cachyos-addons.
+  #
+  # Deliberately NOT pulled in (unlike Bazzite's build):
+  #   - 32-bit/i686 variants (terra-gamescope-libs.i686, terra-mangohud
+  #     .i686): the Flatpak launchers below bundle their own runtimes, so
+  #     native 32-bit libs would only serve rare native 32-bit games at
+  #     the cost of a large multilib dependency chain.
+  #   - gamemode: Bazzite removes it from its own images.
+  #   - cardwire/switcheroo-control: hybrid GPU (iGPU+dGPU) helpers, not
+  #     useful on this NVIDIA-only image.
+  #   - Steam/Lutris/Heroic as RPMs: they ship as Flatpaks instead (see
+  #     the `default-flatpaks` module); the Flatpak VulkanLayer
+  #     extensions (MangoHud, vkBasalt) cover overlays inside them.
+  # ---------------------------------------------------------------------
   - type: dnf
     repos:
       cleanup: true
       copr:
-        - bazzite-org/bazzite
+        # VK_hdr_layer (Vulkan HDR layer) is built by Universal Blue.
         - ublue-os/staging
-        - ublue-os/packages
     install:
       install-weak-deps: false
       packages:
-        - gamescope
+        # HDR/gamescope userspace (unchanged):
         - VK_hdr_layer
         - egl-wayland
+        # Bazzite's patched gamescope (HDR + Valve fixes) and MangoHud,
+        # from Terra's terra-extras sub-repo, exactly like Bazzite's own
+        # build ("dnf5 ... --enable-repo=terra-extras terra-gamescope ...").
+        - repo: terra-extras
+          install-weak-deps: false
+          packages:
+            - terra-gamescope
+            - terra-gamescope-libs
+            - terra-mangohud
+        # From Terra's main repo: umu (Proton launcher used by Lutris and
+        # new non-Steam game tooling), 8BitDo controller udev rules, and
+        # the sched-ext scheduler suite + scx_loader/scxctl.
+        - repo: terra
+          install-weak-deps: false
+          packages:
+            - umu-launcher
+            - umu-wrapper
+            - 8bitdo-udev-rules
+            - scx-scheds
+            - scx-tools
+        # From Fedora: input remapping (Bazzite enables it by default),
+        # controller/input debugging, Vulkan diagnostics, and winetricks.
+        - input-remapper
+        - evtest
+        - linuxconsoletools
+        - vulkan-tools
+        - winetricks
 
   - type: akmods@latest
     base: ogc
@@ -239,6 +293,11 @@ modules:
   # installed at this point).
   - type: script
     snippets:
+      # Bazzite sets UserspaceHID=true in /etc/bluetooth/input.conf
+      # (their build does the same sed) so DualSense/DualShock and
+      # similar controllers expose their full HID profile (gyro,
+      # rumble) over Bluetooth instead of the reduced SPP profile.
+      - test -f /etc/bluetooth/input.conf && sed -i 's/#UserspaceHID.*/UserspaceHID=true/' /etc/bluetooth/input.conf || true
       - semanage fcontext -a -t xdm_exec_t /usr/bin/ly 2>/dev/null || semanage fcontext -m -t xdm_exec_t /usr/bin/ly 2>/dev/null || true
       - restorecon -v /usr/bin/ly 2>/dev/null || true
     scripts:
@@ -287,6 +346,21 @@ modules:
           - org.onlyoffice.desktopeditors
           - com.bitwarden.desktop
           - com.ticktick.TickTick
+          # Gaming launchers, Bazzite-desktop-style: Flatpak Steam plus
+          # the launchers and Proton tooling Bazzite itself ships. Native
+          # gaming tools (mangohud, gamescope, scx, umu, winetricks,
+          # input-remapper) are RPMs -- see the `dnf` module above.
+          - com.valvesoftware.Steam
+          - net.lutris.Lutris
+          - com.heroicgameslauncher.hgl
+          - com.github.Matoking.protontricks
+          - com.vysp3r.ProtonPlus
+          # Vulkan layers usable inside Flatpak sandboxes (MangoHud
+          # overlay / vkBasalt post-processing). Pinned to the Flathub
+          # runtime branch the Steam Flatpak currently uses, like
+          # Bazzite's installer does; bump when the Steam runtime does.
+          - org.freedesktop.Platform.VulkanLayer.MangoHud//25.08
+          - org.freedesktop.Platform.VulkanLayer.vkBasalt//25.08
 
   - type: fonts
     fonts:
@@ -312,6 +386,15 @@ modules:
         - nix.mount
         - nix-daemon
         - set-default-shell.service
+        # Gaming (Bazzite parity):
+        # - input-remapper: per-device input remapping, enabled by
+        #   default on Bazzite. Configure per-user with input-remapper-gtk.
+        - input-remapper.service
+        # - scx_loader: D-Bus daemon that auto-starts the scx_lavd
+        #   sched-ext scheduler (Bazzite's deck default) from
+        #   /etc/scx_loader/config.toml. Disable at runtime with
+        #   `ujust toggle-scx disable` if it misbehaves.
+        - scx_loader.service
       masked:
         #  - getty@tty2.service
         - nvidia-persistenced.service

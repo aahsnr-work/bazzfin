@@ -29,10 +29,35 @@ by hand.
   (`bluetooth.disable_ertm=1`, for some Bluetooth controllers).
 - **ZRAM tuned like Bazzite**: zstd, `min(ram/2, 16 GiB)`
   (`files/system/etc/systemd/zram-generator.conf`).
-- **HDR/gamescope userspace bits**: Bazzite's patched `gamescope` (from the
-  `bazzite-org/bazzite` COPR), `VK_hdr_layer` (from `ublue-os/staging`) and
-  `egl-wayland`. (Hyprland's own HDR/VRR support is per-monitor config, not
-  an image-level toggle.)
+- **Bazzite's gaming userland** (sourced exactly the way Bazzite's own
+  build does it): Bazzite's patched `terra-gamescope` + `terra-mangohud`
+  from the Terra project's `terra-extras` sub-repo, `VK_hdr_layer` (from
+  `ublue-os/staging`) and `egl-wayland`. (Hyprland's own HDR/VRR support
+  is per-monitor config, not an image-level toggle.)
+- **sched-ext gaming schedulers**: `scx-scheds` + `scx-tools`, with the
+  `scx_loader` D-Bus daemon enabled and Bazzite's default config
+  (`scx_lavd`, Auto mode) baked into `/etc/scx_loader/config.toml`.
+  Control it with `ujust toggle-scx`; watch it live with `scxtop`.
+- **Wine/Proton tooling**: `umu-launcher`/`umu-wrapper`, `winetricks`,
+  and the `ntsync` kernel module preloaded for Proton's NTsync
+  synchronization (`usr/lib/modules-load.d/wine-ntsync.conf`, same file
+  Bazzite ships).
+- **Input & controllers**: `input-remapper` (enabled by default, like on
+  Bazzite), `8bitdo-udev-rules`, `evtest`, `linuxconsoletools`, plus the
+  ogc kernel's controller kmods (`xone`, `xpadneo`) and Bazzite's
+  `UserspaceHID=true` Bluetooth tweak (full HID -- gyro/rumble -- for
+  DualSense/DualShock over Bluetooth).
+- **Gaming system tuning, same as Bazzite**: `vm.max_map_count=2147483642`
+  (`sysctl.d/70-gaming.conf`) and Bazzite's disk-scheduler udev rule
+  (`kyber` for SSDs/NVMe, `bfq` for HDDs/removables). ZRAM is tuned the
+  way Bazzite does it too (see below).
+- **Gaming Flatpaks**: Steam, Lutris, Heroic, protontricks, ProtonPlus,
+  and the Flathub VulkanLayer extensions (`MangoHud`, `vkBasalt`) so
+  overlays/post-processing work inside the Flatpak sandbox -- the same
+  Flatpak gaming stack Bazzite's installer ships.
+- **Gaming `ujust` recipes**: `fix-reset-steam` (reinstall a broken
+  Steam Flatpak, Bazzite-style), `toggle-scx` (sched-ext scheduler
+  daemon status/enable/disable), `protontricks` (Flatpak-aware wrapper).
 - Hyprland from the `lionheartp/Hyprland` COPR, `ly` on tty2, the Fedora
   package list, Brave/VS Code/zed from their own repos,
   Obsidian/Zotero/Pyprland from upstream releases, Nerd/Google fonts,

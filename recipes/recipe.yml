@@ -249,7 +249,7 @@ modules:
 
   # Dotfiles: installs chezmoi itself + the init/update services.
   - type: chezmoi
-    repository: https://github.com/aahsnr-configs/dots
+    repository: https://github.com/aahsnr-work/bazzfin
     file-conflict-policy: replace
 
   # Pre-seed /etc/skel at build time (same as the old setup-dotfiles.sh)
@@ -262,7 +262,7 @@ modules:
   # the command exited 0.
   - type: script
     snippets:
-      - HOME=/etc/skel /usr/bin/chezmoi init --apply --force --no-tty -v https://github.com/aahsnr-configs/dots
+      - HOME=/etc/skel /usr/bin/chezmoi init --apply --force --no-tty -v https://github.com/aahsnr-work/bazzfin
       - echo "== /etc/skel contents after chezmoi apply ==" && find /etc/skel -maxdepth 3
 
   # Homebrew itself (installer + update/upgrade timers), same intervals

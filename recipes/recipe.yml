@@ -185,15 +185,11 @@ modules:
             - umu-launcher
             - umu-wrapper
             - 8bitdo-udev-rules
-            - scx-scheds
-            - scx-tools
-
         - repo: terra-extras
           install-weak-deps: false
           packages:
             - terra-gamescope
             - terra-gamescope-libs
-
         - repo: code
           install-weak-deps: false
           packages:
@@ -202,6 +198,18 @@ modules:
           packages:
             - brave-browser
             - brave-origin
+
+  - type: dnf
+    repos:
+      cleanup: true
+      copr:
+        - bieszczaders/kernel-cachyos-addons
+    install:
+      skip-unavailable: false
+      install-weak-deps: false
+      packages:
+        - scx-scheds
+        - scx-tools
 
   - type: dnf
     repos:

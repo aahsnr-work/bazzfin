@@ -51,6 +51,7 @@ installed. Homebrew packages install themselves in the background
 | [[ujust-Recipes]] | Complete `ujust` command reference (shared + bazzfin-specific) |
 | [[SELinux]] | SELinux tooling shipped, policy workarounds, and the ostree util.py patch |
 | [[Dotfiles-and-Shell]] | chezmoi, /etc/skel, zsh default shell, Homebrew, Doom Emacs, Home Manager |
+| [[Bazzfin-Portal]] | The GTK3 portal: declarative YAML-driven management app, Bazaar integration |
 | [[Troubleshooting]] | Known build/runtime issues and how they were solved |
 | [[CI-CD]] | GitHub Actions build, cosign signing, secrets, Renovate |
 | [[Local-Development]] | Building locally, validating, linting, contributing conventions |

@@ -84,6 +84,13 @@ by hand.
   startup. Extra `ujust`
   recipes: `rollback`, `status`, `cockpit`, `toggle-bpftune` (see
   `files/justfiles/50-system.just`).
+- **bazzfin portal + Bazaar**: a GTK3 configuration app
+  (`bazzfin-portal`, declaratively driven by
+  `files/system/usr/share/bazzfin-portal/portal.yml` in the same style as
+  Bazzite's Portal/yafti) exposing updates, uupd/cockpit/scx/bpftune toggles,
+  rebase/rollback and Flatpak installs in visible terminal windows; plus
+  **Bazaar**, the modern Flathub app store (from the `ublue-os/packages` COPR,
+  also surfaced in the portal). See the wiki's Bazzfin-Portal page.
 - Hyprland from the `lionheartp/Hyprland` COPR, `ly` on tty2, the Fedora
   package list, Brave/VS Code/zed from their own repos,
   Obsidian/Zotero/Pyprland from upstream releases, Nerd/Google fonts,

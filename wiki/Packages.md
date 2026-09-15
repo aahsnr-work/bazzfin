@@ -71,6 +71,10 @@ protontricks, ProtonPlus, MangoHud + vkBasalt VulkanLayers. See
 - **Web console:** `cockpit-system`, `cockpit-networkmanager`,
   `cockpit-podman`, `cockpit-selinux`, `cockpit-files`, `cockpit-storaged`
   (installed but OFF by default — `ujust cockpit`).
+- **App store:** `bazaar` (the modern Flathub app store, from the
+  `ublue-os/packages` COPR).
+- **Portal:** `bazzfin-portal` (GTK3/PyGObject app + YAML config, baked in
+  from `files/system/`) — see [[Bazzfin-Portal]].
 
 ## Hardware & monitoring (Intel machine)
 

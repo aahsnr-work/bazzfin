@@ -264,6 +264,11 @@ modules:
         - ublue-os-selinux-workarounds
         - greenboot
         - greenboot-default-health-checks
+        # Bazaar: the modern Flathub app store (GTK4/libadwaita). Present in
+        # the ublue-os/packages COPR for the current Fedora release; the
+        # alternative is the Flathub build (io.github.kolunmi.Bazaar), which
+        # auto-updates via uupd -- swap if preferred.
+        - bazaar
         # Cockpit web console (activated via `ujust cockpit`)
         - cockpit-system
         - cockpit-networkmanager

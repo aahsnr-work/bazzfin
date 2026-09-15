@@ -14,3 +14,7 @@ Containerfile
 .idea/
 *.swp
 /.bluebuild-scripts_*
+
+# Python bytecode (e.g. from linting the portal app)
+__pycache__/
+*.pyc

@@ -20,6 +20,7 @@
 
 **Project**
 
+- [[Bazzfin-Portal]]
 - [[Troubleshooting]]
 - [[CI-CD]]
 - [[Local-Development]]

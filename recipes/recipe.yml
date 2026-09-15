@@ -231,6 +231,10 @@ modules:
         - umu-launcher
         - umu-wrapper
         - 8bitdo-udev-rules
+        # bpftune-gaming (adaptive kernel tuning) is built by Terra and
+        # lives in the terra repo -- NOT in any ublue COPR (Bazzite relies
+        # on the same fact via its `*terra*.priority=1` setup).
+        - bpftune-gaming
 
   # ---------------------------------------------------------------------
   # Bazzite's system-management stack + tooling (TODO.md: bazzite system
@@ -251,16 +255,15 @@ modules:
       cleanup: true
       copr:
         - ublue-os/packages        # uupd, ublue-os-selinux-workarounds
-        - ublue-os/bazzite         # bpftune-gaming
     install:
       install-weak-deps: false
       packages:
         # Update daemon + boot health + SELinux fixes
+        # (bpftune-gaming comes from the terra repo in the module above)
         - uupd
         - ublue-os-selinux-workarounds
         - greenboot
         - greenboot-default-health-checks
-        - bpftune-gaming
         # Cockpit web console (activated via `ujust cockpit`)
         - cockpit-system
         - cockpit-networkmanager

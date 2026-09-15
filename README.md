@@ -58,6 +58,19 @@ by hand.
 - **Gaming `ujust` recipes**: `fix-reset-steam` (reinstall a broken
   Steam Flatpak, Bazzite-style), `toggle-scx` (sched-ext scheduler
   daemon status/enable/disable), `protontricks` (Flatpak-aware wrapper).
+- **Bazzite's system-management stack**: `uupd` (universal update daemon --
+  system, Flatpak, Homebrew, distrobox -- running by default via
+  `uupd.timer`; the shared `ublue-os-just` package's `ujust update` and
+  `toggle-updates` detect and drive it automatically), `greenboot` boot
+  health checks with automatic rollback on failed boots, `bpftune-gaming`
+  adaptive kernel tuning, `ublue-os-selinux-workarounds`, and the Cockpit
+  web console (installed but OFF by default -- `ujust cockpit`). rpm-ostreed's
+  own automatic-update timer is disabled in favor of uupd
+  (`/etc/rpm-ostreed.conf`: `AutomaticUpdatePolicy=none`). Intel-scoped
+  hardware/monitoring tier: `lm_sensors`, `i2c-tools`, `iio-sensor-proxy`,
+  `intel-gpu-tools`, `btop`, `duf`, `stress-ng`, `ydotool`. Extra `ujust`
+  recipes: `rollback`, `status`, `cockpit`, `toggle-bpftune` (see
+  `files/justfiles/50-system.just`).
 - Hyprland from the `lionheartp/Hyprland` COPR, `ly` on tty2, the Fedora
   package list, Brave/VS Code/zed from their own repos,
   Obsidian/Zotero/Pyprland from upstream releases, Nerd/Google fonts,
@@ -286,6 +299,90 @@ push to `main`, on pull requests, and on a daily cron, and signs it with
 repository secret (the **full contents of `cosign.key`** — see the setup
 steps above). The matching public key is committed as
 [`cosign.pub`](cosign.pub).
+
+## Avoiding repo-scoped dnf failures (Terra & third-party repos)
+
+> If a build ever fails with errors like `package X from terra-extras
+requires Y, but none of the providers can be installed` or `nothing
+provides libSDL2-2.0.so.0 needed by X.i686 from terra-extras`, read this
+> section before touching the package list. It happened repeatedly (e.g.
+> with `terra-gamescope`) and the cause is **not** a missing package.
+
+### Root cause
+
+BlueBuild executes every repo-scoped package entry in the `dnf` module
+
+```yaml
+- type: dnf
+  install:
+    packages:
+      - repo: terra-extras # <- the trap
+        packages:
+          - terra-gamescope
+```
+
+as a dnf command restricted to that single repository:
+
+```bash
+dnf5 -y --setopt=install_weak_deps=False install --repoid terra-extras terra-gamescope
+```
+
+In dnf5, `--repoid` confines the **whole transaction -- dependency resolution
+included -- to that repo**. Fedora, updates and the terra main repo are
+invisible while it runs. So a package whose dependencies (SDL2, X11, glib, …)
+live in Fedora becomes unresolvable; the solver then falls through to any
+i686 multilib builds the third-party repo happens to ship, which fail even
+harder (`nothing provides libSDL2-2.0.so.0 ... i686`). Any `repo:`-scoped
+package with a dependency that lives in Fedora will hit this -- which is why
+it recurs across different packages.
+
+### Rules to avoid it
+
+1. **Only use `repo:`-scoped entries for:**
+   - repo _bootstrap/release_ packages (`terra-release`,
+     `terra-release-extras`, `*-release`, ...) whose dependency closure is
+     fully inside that repo, or
+   - true leaf packages whose entire dependency closure lives in that repo
+     (`code`, `brave-browser`, ...).
+2. **Everything else goes in the plain `packages:` list** with the repo
+   enabled via `repos.files:` / `repos.copr:`. The dependency solver then
+   sees all enabled repos and picks dependencies from Fedora.
+3. **Let repo `priority` decide conflicts.** Terra's sub-repos are designed
+   for this: `terra-extras.repo` ships `priority=150` (higher number = lower
+   precedence, default 50), so Fedora automatically wins for shared
+   dependencies. If you add a third-party repo that ships packages also in
+   Fedora without setting one, give it a `priority=` override via a local
+   `.repo` file in `files/dnf/`.
+4. **Guard deliberately conflicting sub-repos with `exclude:`.** terra-extras
+   forks some Fedora packages (its own `zlib`, patched WINE, ...). The terra
+   module pins `exclude: [zlib]` (the same fix zirconium ships) so the solver
+   can never pull terra's zlib over Fedora's. Extend that list when enabling
+   more of terra's sub-repos (`terra-mesa`, `terra-multimedia`) -- Terra's own
+   docs warn those "conflict with RPM Fusion or the Fedora repositories".
+5. **Bootstrap repos in an earlier dnf module.** BlueBuild runs all plain
+   string packages in one transaction first, then each `repo:` object in its
+   own transaction, in list order. A package installed in one transaction
+   cannot make a repo visible to another transaction in the _same_ module.
+   That's why the recipe installs `terra-release-extras` in the first dnf
+   module (which drops `/etc/yum.repos.d/terra-extras.repo` + the terra GPG
+   keys onto the image) and installs the terra _packages_ in a second,
+   unscoped module that re-adds `terra.repo`.
+6. **Mind `cleanup: true` semantics.** It only removes repos the module
+   _added_ (files/coprs). Repo files that arrive inside a package (like
+   `terra-extras.repo`) persist on the image -- decide deliberately which
+   third-party repos stay enabled at upgrade time.
+
+### Recognizing the failure signature
+
+- Every solver line says `from <third-party-repo>` -> resolution was
+  repo-confined; fix the scoping, not the package list.
+- `nothing provides <lib>.so needed by <pkg>.i686 from <repo>` -> the x86_64
+  path already failed and the solver is grasping at multilib providers.
+
+The current, working layout (bootstrap module + unscoped terra module with
+`exclude: [zlib]`) lives in [`recipes/recipe.yml`](recipes/recipe.yml) with
+inline comments explaining each step -- keep those comments in sync when
+adding packages.
 
 ## License
 

@@ -13,6 +13,21 @@ base-image: ghcr.io/ublue-os/base-main
 image-version: latest
 
 modules:
+  # -------------------------------------------------------------------------
+  # Modular build: these from-file includes are an exact 1:1 split of the
+  # inline modules below. To switch to the modular layout, delete the inline
+  # entries and uncomment the from-file lines here (paths are relative to
+  # recipes/): https://blue-build.org/how-to/multiple-files/
+  # - from-file: bazzfin-base.yml
+  # - from-file: bazzfin-kernel.yml
+  # - from-file: bazzfin-packages-core.yml
+  # - from-file: bazzfin-packages-terra.yml
+  # - from-file: bazzfin-packages-system.yml
+  # - from-file: bazzfin-desktop.yml
+  # - from-file: bazzfin-apps.yml
+  # - from-file: bazzfin-flatpaks.yml
+  # - from-file: bazzfin-services.yml
+  # -------------------------------------------------------------------------
   - type: signing
 
   - type: files

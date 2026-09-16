@@ -1,0 +1,3 @@
+- [ ] try to avoid install steam, lutris from flatpaks
+- [ ] use ogc kernel
+- [ ] use akmods module

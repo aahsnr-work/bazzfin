@@ -1,3 +1,0 @@
-[settings]
-# This trusts any .mise.toml found within your projects folder
-trusted_config_paths = ["~/projects/*", "~/kernel-stitcher/*", "~/Git/*"]

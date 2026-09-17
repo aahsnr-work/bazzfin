@@ -1,20 +1,16 @@
 cosign.key
-Containerfile
-# Build/test artifacts
+cosign.private
+/Containerfile
 *.build
 *.log
 /tmp/
 /dist/
-# Locally built container archives
 *.tar
 *.tar.gz
 *.oci
-# Editor noise
 .vscode/
 .idea/
 *.swp
 /.bluebuild-scripts_*
-
-# Python bytecode (e.g. from linting the portal app)
 __pycache__/
 *.pyc
